@@ -2,6 +2,8 @@
 (function (window) {
 	'use strict';
 
+	function noop() {};
+
 	/**
 	 * Creates a new client side storage object and will create an empty
 	 * collection if no collection already exists.
@@ -10,17 +12,11 @@
 	 * @param {function} callback Our fake DB uses callbacks because in
 	 * real life you probably would be making AJAX calls
 	 */
-	function Store(name, callback) {
-		callback = callback || function () {};
-
+	function Store(name, callback = noop) {
 		this._dbName = name;
 
 		if (!localStorage[name]) {
-			var data = {
-				todos: []
-			};
-
-			localStorage[name] = JSON.stringify(data);
+			localStorage[name] = JSON.stringify({ todos: [] });
 		}
 
 		callback.call(this, JSON.parse(localStorage[name]));
@@ -61,8 +57,7 @@
 	 *
 	 * @param {function} callback The callback to fire upon retrieving data
 	 */
-	Store.prototype.findAll = function (callback) {
-		callback = callback || function () {};
+	Store.prototype.findAll = function (callback = noop) {
 		callback.call(this, JSON.parse(localStorage[this._dbName]).todos);
 	};
 
@@ -74,19 +69,9 @@
 	 * @param {function} callback The callback to fire after saving
 	 * @param {number} id An optional param to enter an ID of an item to update
 	 */
-	Store.prototype.save = function (updateData, callback, id) {
+	Store.prototype.save = function (updateData, callback = noop, id) {
 		var data = JSON.parse(localStorage[this._dbName]);
 		var todos = data.todos;
-
-		callback = callback || function () {};
-
-		// Generate an ID
-	    var newId = ""; 
-	    var charset = "0123456789";
-
-        for (var i = 0; i < 6; i++) {
-     		newId += charset.charAt(Math.floor(Math.random() * charset.length));
-		}
 
 		// If an ID was actually given, find the item and update each property
 		if (id) {
@@ -102,10 +87,8 @@
 			localStorage[this._dbName] = JSON.stringify(data);
 			callback.call(this, todos);
 		} else {
-
-    		// Assign an ID
-			updateData.id = parseInt(newId);
-    
+			// Assign an ID
+			updateData.id = parseInt(Date.now());
 
 			todos.push(updateData);
 			localStorage[this._dbName] = JSON.stringify(data);
@@ -121,23 +104,10 @@
 	 */
 	Store.prototype.remove = function (id, callback) {
 		var data = JSON.parse(localStorage[this._dbName]);
-		var todos = data.todos;
-		var todoId;
-		
-		for (var i = 0; i < todos.length; i++) {
-			if (todos[i].id == id) {
-				todoId = todos[i].id;
-			}
-		}
-
-		for (var i = 0; i < todos.length; i++) {
-			if (todos[i].id == todoId) {
-				todos.splice(i, 1);
-			}
-		}
+		data.todos = data.todos.filter(todo => todo.id !== id);
 
 		localStorage[this._dbName] = JSON.stringify(data);
-		callback.call(this, todos);
+		callback.call(this, data.todos);
 	};
 
 	/**
@@ -146,9 +116,8 @@
 	 * @param {function} callback The callback to fire after dropping the data
 	 */
 	Store.prototype.drop = function (callback) {
-		var data = {todos: []};
-		localStorage[this._dbName] = JSON.stringify(data);
-		callback.call(this, data.todos);
+		localStorage[this._dbName] = JSON.stringify({ todos: [] });
+		callback.call(this, []);
 	};
 
 	// Export to window
